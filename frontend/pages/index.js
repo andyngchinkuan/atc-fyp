@@ -13,18 +13,50 @@ import Button from "@material-ui/core/Button";
 import InputAdornment from "@material-ui/core/InputAdornment";
 import IconButton from "@material-ui/core/IconButton";
 import ClearRounded from "@material-ui/icons/ClearRounded";
+import RootRef from "@material-ui/core/RootRef";
 import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
 import MenuItem from "@material-ui/core/MenuItem";
-
+import TextField from "@material-ui/core/TextField";
+import MicIcon from '@material-ui/icons/Mic';
+import ClearAllIcon from '@material-ui/icons/ClearAll';
+import FlightTakeoffIcon from '@material-ui/icons/FlightTakeoff';
+import FlightIcon from '@material-ui/icons/Flight';
 import MarkupText from "../modules/components/MarkupText";
+import Switch from "@material-ui/core/Switch";
+
+import io from 'socket.io-client';
+import Record from './Record';
 
 const EXAMPLES = [
   "singapore four runway two zero right continue approach",
-  "viet nam vacate whiskey five contact ground at one two one eight",
-  "cebu two zero two center wind seven nine zero three zero you are clear land",
-  "indonesia nine two zero center after the landing firefly six zero and clear to land"
+  "runway two zero right continue approach singapore four",
+  "jet asia two four five vacate echo five contact singapore ground at one two one point eight",
+  "swissair three four five pushback approved",
+  "request pushback swissair three four five",
+  "singapore nine four two pushback completed confirm brakes set",
+  "ready to start up speedbird four two",
+  "speedbird four nine two decrease speed to two hundred knots and maintain speed",
+  "mayday mayday mayday hamburg airways two seven four",
+  "crystal-air four two three increase speed to four hundred knots",
+  "increase speed to four hundred knots cebu five four",
+  "ryanair six seven climb to four thousand feet and maintain flight level",
+  "singapore three eight six altimeter setting sea level pressure one zero eight six",
+  "far eastern eight three slot time one two three six ",
+  "cebu two zero two center wind seven nine zero three zero you are clear to land",
+  "red cap one three two clear to enter runway zero two center",
+  "malaysia one two three cancel take off clearance vehicle on runway three one right",
+  "air canada four three clear to backtrack runway one two left",
+  "air seoul four five cleared for takeoff",
+  "air ghana four three two taxi to holding area",
+  "wokair six four two cross runway two two right",
+  "indonesia nine two zero center after the landing firefly six zero and clear to land",
+  "indonesia nine two zero speak slower",
+  "air macao three six start up approved",
+  "indonesia nine two radar contact",
+  "california shuttle six contact hong kong departure at one two three decimal eight",
+  "musrata air four three contact tokyo tower one one eight point seven"
 ];
 
 // Styles definition
@@ -118,68 +150,134 @@ class App extends Component {
       output: "",
       highlight: [],
       errorVisible: false,
-      asrLogs: [],
-      asrTranscribing: false,
-      asrLoading: false,
-      asrInitialized: false,
       exampleValue: "",
-      asrUrl: process.env.ASR_BACKEND_URL,
-      asrStatusUrl: process.env.ASR_BACKEND_STATUS_URL
+      mode: 'record',
+      backendUrl: 'http://localhost:3001',
+      isSocketReady: false,
+      transcription: '',
+      partialResult: '',
+      status: 0, // 0: idle, 1: streaming, 2: finish
+      isBusy: false,
+      socket: null,
+      switchstate: false
     };
+    this.handleSwitch = this.handleSwitch.bind(this);
+    this.handleSpeechAreaChange = this.handleSpeechAreaChange.bind(this);
   }
-
-  _newDictate = () => {
-    this.dictate = new window.Dictate({
-      server: this.state.asrUrl,
-      serverStatus: this.state.asrStatusUrl,
-      recorderWorkerPath: "static/js/recorderWorker.js",
-      onReadyForSpeech: () => {
-        this.setState({ asrLoading: false, asrTranscribing: true });
-        this._addAsrLog("READY FOR SPEECH");
-      },
-      onEndOfSpeech: () => {
-        this.setState({ asrLoading: true });
-        this._addAsrLog("END OF SPEECH");
-      },
-      onEndOfSession: () => {
-        this.setState({ asrLoading: false, asrTranscribing: false });
-        this.dictate.cancel();
-        this._addAsrLog("END OF SESSION");
-      },
-      onServerStatus: () => {},
-      onPartialResults: hypos => {
-        this.transcription.add(hypos[0].transcript, false);
-        this.setState({ text: this.transcription.toString() });
-      },
-      onResults: hypos => {
-        this.transcription.add(hypos[0].transcript, true);
-        this.setState({ text: this.transcription.toString() });
-      },
-      onError: () => {
-        this.dictate.cancel();
-      },
-      onEvent: (_, data) => {
-        this._addAsrLog(data);
-      }
-    });
-  };
+  
 
   componentDidMount() {
     this.transcription = new Transcription();
-    this._newDictate();
     this._handleConnectWs();
-
-    (() => {
-      this.dictate.cancel();
-      // this.dictate.init();
-    })();
+    this.initSockets();
   }
+  
+  initSockets () {
+    const socket = io(this.state.backendUrl, {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: Infinity
+    })
+
+    socket.on('connect', () => {
+      console.log('socket connected!')
+    })
+
+    socket.on('stream-ready', () => {
+      this.setState({
+        isSocketReady: true,
+        status: 1
+      })
+    })
+
+    socket.on('stream-data', data => {
+      if (data.type === 'import') {
+        if (data.status === 0 && data.message === 'EXIT') {
+          this.setState({
+            status: 2,
+            isBusy: false
+          })
+        } else {
+          this.setState({
+            transcription: data.message
+          })
+        }
+      } else {
+        if (data.result.final) {
+          this.setState(prevState => ({
+            transcription: prevState.transcription + ' ' + data.result.hypotheses[0].transcript,
+            partialResult: ''
+          }))
+          this.handleSpeechAreaChange()
+        } else {
+          this.setState(prevState => ({
+            partialResult: '[...' + data.result.hypotheses[0].transcript + ']'
+          }))
+        }
+      }
+    })
+  
+  socket.on('stream-close', () => {
+      this.setState({
+        status: 2,
+        isBusy: false
+      })
+    })
+
+    this.setState({
+      socket
+    })
+  }
+
+  onTokenChange = (e) => {
+    this.setState({
+      token: e.target.value
+    })
+  }
+
+  reset = () => {
+    this.setState({
+      transcription: '',
+      partialResult: ''
+    })
+  }
+
+  setBusy = () => {
+    this.setState({
+      isBusy: true
+    })
+  }
+
+  setStatus = (status) => {
+    this.setState({
+      status
+    })
+  }
+
+  changeTab = (tab) => {
+    if (this.state.isBusy) {
+      const cf = window.confirm('If you change tab, current stream process will be lost')
+
+      if (cf) {
+        this.setState({
+          mode: tab,
+          isBusy: false
+        })
+        this.reset()
+      }
+    } else {
+      this.setState({
+        mode: tab
+      })
+      this.reset()
+    }
+  }
+   
 
   logRef = createRef();
 
   _onWsMessage = e => {
-    // const parsedData = JSON.parse(e.data);
-    // this.setState({ highlight: parsedData });
     this.setState({ output: e.data });
   };
 
@@ -202,35 +300,28 @@ class App extends Component {
     }
   }
 
-  _handleTextAreaChange = e => {
-    this.setState({ text: e.target.value });
-    // this.ws.send(e.target.value);
+ handleSpeechAreaChange(){
+    let transcribedValue = this.state.transcription
+    this.setState({text: transcribedValue})
   };
 
+  _handleTextAreaChange = e => {
+    this.setState({ text: e.target.value });
+  };
+  
+  _handleSpeechChange = e => {
+    this.setState({ transcription:  e.target.value });
+  };
+  
   _clearInput = () => {
     this.setState({ text: "" });
   };
 
-  _addAsrLog = log => {
-    const formattedLog = `${getCurrentTimeString()} ${log}`;
-    this.setState(prevState => ({
-      asrLogs: [...prevState.asrLogs, formattedLog]
-    }));
-    this.logRef.current.scrollTo({
-      top: this.logRef.current.scrollHeight,
-      behavior: "smooth"
-    });
-  };
-
-  _handleAsrButtonClick = () => {
-    this.setState({ asrLoading: true });
-    if (this.state.asrTranscribing) {
-      this.dictate.stopListening();
-      // this.dictate.cancel();
-    } else {
-      this.dictate.startListening();
-    }
-  };
+  handleSwitch(e){
+    e.preventDefault();
+    let name = e.target.name;
+    this.setState({[name]:e.target.checked})
+  }
 
   shouldComponentUpdate(_, nextState) {
     if (nextState.text !== this.state.text) {
@@ -241,19 +332,6 @@ class App extends Component {
 
   _sendWsMessage = message => {
     this.ws.send(message);
-  };
-
-  _clearAsrLogs = () => {
-    this.setState({
-      asrLogs: []
-    });
-  };
-
-  _initializeAsr = () => {
-    this._newDictate();
-    this.setState({ asrInitialized: true });
-    this.dictate.init();
-    this.transcription.clear();
   };
 
   _handleExampleChange = e => {
@@ -269,16 +347,13 @@ class App extends Component {
     }
   };
 
+
   render() {
     const { classes } = this.props;
     const {
       text,
       errorVisible,
       output,
-      asrLogs,
-      asrTranscribing,
-      asrLoading,
-      asrInitialized,
       exampleValue
     } = this.state;
     return (
@@ -286,8 +361,9 @@ class App extends Component {
         <AppBar position="static" style={{ background: '#3FA6EF' }}>
           <Toolbar>
             <Typography variant="h6" color="default">
-              Jeremy's ATC Text Highlighter
+              Air Traffic Control NER <FlightTakeoffIcon></FlightTakeoffIcon>
             </Typography>
+	    
           </Toolbar>
         </AppBar>
         <Box p={3}>
@@ -295,11 +371,12 @@ class App extends Component {
             <PaperFlex flexDirection="column" width={[1, 1 / 2]} pr={[0, 2]}>
               <Typography variant="h6">Input text</Typography>
               <Paper className={classes.paper}>
+		{/*{this.state.switchstate === false && */}
                 <Input
                   multiline
                   fullWidth
                   placeholder="Type here..."
-                  onChange={this._handleTextAreaChange}
+                  onChange={this._handleTextAreaChange }
                   value={text}
                   endAdornment={
                     <InputAdornment position="end">
@@ -307,9 +384,28 @@ class App extends Component {
                         <ClearRounded />
                       </IconButton>
                     </InputAdornment>
-                  }
+            	}
                 />
+		{/*}
+                {
+		{this.state.switchstate &&
+		<textarea
+                value={this.state.transcription + ' ' + this.state.partialResult}
+                readOnly
+                className={`form-control ${this.state.status === 2 ? 'success' : ''}`}
+                rows="8"
+                cols="80"
+                />
+		} */}
+
               </Paper>
+	{/*	<Switch
+			checked={this.state.switchstate}
+			onChange={this.handleSwitch}
+			value="checkedA"
+			name="switchstate"
+			inputProps={{'aria-label':'secondary checkbox'}}
+		/> */}
             </PaperFlex>
             <PaperFlex flexDirection="column" width={[1, 1 / 2]} pl={[0, 2]}>
               <Typography variant="h6">Results</Typography>
@@ -352,9 +448,52 @@ class App extends Component {
                   Retry
                 </Button>
               )}
+            
             </Flex>
 
-    
+            <Flex alignItems="center" flexWrap="wrap" py={1}>
+              <Box width={[1]} pr={[0, 2]}>
+                <TextField
+                  label="Token"
+                  value={this.state.asrUrl}
+                  onChange={this.onTokenChange}
+                  fullWidth
+                />
+              </Box>
+            </Flex>
+           
+            {/*<button onClick={() => this.changeTab('record')} className={`btn btn-tab nav-link ${this.state.mode === 'record' ? 'active' : ''}`}>
+                  Recording
+                </button>*/}
+           <div>
+              
+                <Record
+                  socket={this.state.socket}
+                  isBusy={this.state.isBusy}
+                  token={this.state.token}
+                  isSocketReady={this.state.isSocketReady}
+                  backendUrl={this.state.backendUrl}
+                  reset={this.reset}
+                  setBusy={this.setBusy}
+                /> 
+            </div>
+            <div
+              className="form-group transcription"
+            >
+              <span
+                className="is-finish"
+              >
+                <i className="fal fa-check" />
+              </span>
+              {/*<textarea
+                value={this.state.transcription + ' ' + this.state.partialResult}
+                readOnly
+                className={`form-control ${this.state.status === 2 ? 'success' : ''}`}
+                rows="8"
+                cols="80"
+              />*/}
+            </div>
+           
           </Flex>
         </Box>
       </>
