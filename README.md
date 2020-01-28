@@ -1,4 +1,4 @@
-# Jeremy's ATC Text Highlighting FYP
+# Updated ATC Text Highlighting FYP
 
 ## READMEs
 - [Server](server/README.md)
@@ -6,3 +6,4 @@
 
 ## Credits
 - Felix Putera's FYP (Previously forked)
+- Jeremy's FYP (Previously Forked)
