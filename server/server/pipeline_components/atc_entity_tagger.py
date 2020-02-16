@@ -5,7 +5,7 @@ import yaml
 
 import atc_model
 
-valid_tags = ["CALL", "RWY", "WS", "FREQ", "ACTION","TAXY","CLEARANCE","TOWER"]
+valid_tags = ["CALL","TIME", "ALTIMETER", "RWY", "WS", "FREQ", "ACTION", "LEVEL", "SPEED", "HEADING","TAXI","CLEARANCE","TOWER", "EMERGENCY", "STARTUP", "PUSHBACK"]
 
 with open("config.yaml") as configfile:
     config = yaml.load(configfile)
