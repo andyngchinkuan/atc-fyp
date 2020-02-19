@@ -28,6 +28,8 @@ import Switch from "@material-ui/core/Switch";
 
 import io from 'socket.io-client';
 import Record from './Record';
+import Import from './Import';
+
 
 const EXAMPLES = [
   "singapore four runway two zero right continue approach",
@@ -202,6 +204,7 @@ class App extends Component {
           this.setState({
             transcription: data.message
           })
+	  this.handleSpeechAreaChange()
         }
       } else {
         if (data.result.final) {
@@ -461,12 +464,26 @@ class App extends Component {
                 />
               </Box>
             </Flex>
-           
-            {/*<button onClick={() => this.changeTab('record')} className={`btn btn-tab nav-link ${this.state.mode === 'record' ? 'active' : ''}`}>
+           <br></br>
+              <Flex alignItems="center" flexWrap="wrap" py={1}>
+              <Box width="true">
+                <button onClick={() => this.changeTab('record')} className={`btn btn-tab nav-link ${this.state.mode === 'record' ? 'active' : ''}`} >
                   Recording
-                </button>*/}
+                </button>
+		 </Box>
+		<Box width={[1, 1 / 2]} pl={[0, 2]}>
+                <button onClick={() => this.changeTab('import')} className={`btn btn-tab nav-link ${this.state.mode === 'import' ? 'active' : ''}`} >
+                  Import audio
+                </button>
+            	</Box>
+		</Flex>
+
+	<br></br>
+
+
            <div>
-              
+              {
+                this.state.mode === 'record' ? 
                 <Record
                   socket={this.state.socket}
                   isBusy={this.state.isBusy}
@@ -475,7 +492,14 @@ class App extends Component {
                   backendUrl={this.state.backendUrl}
                   reset={this.reset}
                   setBusy={this.setBusy}
-                /> 
+                /> : <Import
+                  backendUrl={this.state.backendUrl}
+                  token={this.state.token}
+                  setBusy={this.setBusy}
+                  socket={this.state.socket}
+                  setStatus={this.setStatus}
+                />
+              }
             </div>
             <div
               className="form-group transcription"
