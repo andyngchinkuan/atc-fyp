@@ -9,7 +9,7 @@
 1. Install the required dependencies  
 `$ pipenv install`
 2. Download the NER model archive [here](https://drive.google.com/file/d/10BxgEVqNtSkPYXHSZjEFioVX-qOaN3QS/view?usp=sharing), and copy it to `models/` directory. Optionally, if you use your own NER model, modify the archived model path in `config.yaml`
-3. Updated model with new grammar rules are found [here](https://drive.google.com/file/d/11XD3JgufWiEIWMbvHAE9oV1hJMBgaBEN/view?usp=sharing)
+3. Updated model with new grammar rules is found [here](https://drive.google.com/file/d/11XD3JgufWiEIWMbvHAE9oV1hJMBgaBEN/view?usp=sharing)
 4. **IMPORTANT** activate the virtualenv, always do this before running anything in this project  
 `$ pipenv shell`
 
