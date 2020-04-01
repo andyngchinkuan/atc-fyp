@@ -1,6 +1,6 @@
-# Updated ATC Text Highlighting FYP
+# Air Traffic Control Text Highlighting FYP
 
-## READMEs
+## README
 - [Server](server/README.md)
 - [Frontend](frontend/README.md)
 
