@@ -9,5 +9,5 @@
 - Jeremy's FYP (Previously Forked)
 
 Last updated:
-Andy Ng Chin Kuan AY2019 Aug - AY2020 April
-Contact: ntufypmaterials@gmail.com
+- Andy Ng Chin Kuan AY2019 Aug - AY2020 April
+- Contact: ntufypmaterials@gmail.com
