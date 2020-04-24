@@ -3,7 +3,7 @@
 ## README
 - [Server](server/README.md)
 - [Frontend](frontend/README.md)
-- .[FYP Video].(https://youtu.be/o7Z0EBCIfyg)
+- .[FYP Video](https://youtu.be/o7Z0EBCIfyg)
 
 ## Credits
 - Felix Putera's FYP (Previously forked)
