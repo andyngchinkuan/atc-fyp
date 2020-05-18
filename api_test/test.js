@@ -29,5 +29,5 @@ client.on('connect', function(connection) {
     }
     sendNumber();
 });
- 
-client.connect('ws://34.87.97.47:8080/');
+
+client.connect('ws://35.198.202.123:8080');
