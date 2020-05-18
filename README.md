@@ -1,5 +1,7 @@
 # Air Traffic Control Text Highlighting FYP
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/d209f075-f6b0-4769-b668-6ec7b10c4d01/deploy-status)](https://app.netlify.com/sites/atc-fyp/deploys)
+
 ## README
 - [Server](server/README.md)
 - [Frontend](frontend/README.md)
