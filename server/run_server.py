@@ -22,6 +22,6 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     port = args.port
 
-    server = pywsgi.WSGIServer(('', port), app, handler_class=WebSocketHandler)
+    server = pywsgi.WSGIServer(('0.0.0.0', port), app, handler_class=WebSocketHandler)
     logging.info(f"Serving server at port {port}")
     server.serve_forever()
